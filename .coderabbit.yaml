@@ -1,0 +1,30 @@
+language: "de-AT"
+
+integrations:
+  jira:
+    usage: enabled
+chat:
+  integrations:
+    jira:
+      usage: enabled
+
+reviews:
+  profile: "quiet"
+
+  pre_merge_checks:
+    custom_checks:
+      - name: "Jira Acceptance Criteria"
+        mode: "warning"
+        instructions: |
+          Find a Jira issue key in the PR title or description matching
+          LAKWYC-[0-9]+.
+
+          If present, retrieve the Jira issue using Jira/MCP.
+
+          If retrieval succeeds, output:
+          MCP Jira lookup: SUCCESS
+
+          Then list the acceptance criteria and compare them with the PR.
+
+          If retrieval fails, output:
+          MCP Jira lookup: FAILED
