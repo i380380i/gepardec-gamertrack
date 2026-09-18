@@ -3,6 +3,10 @@ language: "de-AT"
 integrations:
   jira:
     usage: enabled
+chat:
+  integrations:
+    jira:
+      usage: enabled
 
 reviews:
   profile: "quiet"
