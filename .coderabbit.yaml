@@ -1,0 +1,485 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+integrations:
+  jira:
+    usage: enabled
+chat:
+  integrations:
+    jira:
+      usage: enabled
+language: "de-AT"
+
+tone_instructions: |
+  Schreibe Reviews auf Deutsch (de-AT).
+  Sei präzise, technisch und evidence-basiert.
+  Melde konkrete und actionable Findings.
+  Vermeide reine Style-Kommentare, außer eine etablierte
+  Repository-Konvention wird verletzt.
+  Erfinde niemals Jira-Anforderungen, Tool-Ergebnisse,
+  MCP-Zustände oder Repository-Evidenz.
+
+reviews:
+  # "quiet" ist kein gültiges CodeRabbit-v2-Profil.
+  # "assertive" stellt sicher, dass zusätzlich zum Jira-Check
+  # ein umfassender technischer Review durchgeführt wird.
+  profile: "assertive"
+
+  review_status: true
+  review_details: true
+
+  # CodeRabbit soll Linked-Issue-Kontext berücksichtigen,
+  # der Custom Check unten bleibt jedoch die verbindliche
+  # Jira-Anforderungsprüfung.
+  assess_linked_issues: true
+
+  pre_merge_checks:
+    custom_checks:
+      - name: "Jira requirement verification"
+        mode: "warning"
+        instructions: |
+          # ============================================================
+          # PROJECT CONFIGURATION
+          # ============================================================
+
+          The following values are authoritative and MUST NOT be
+          automatically discovered, guessed, replaced or broadened.
+
+          SKILL_NAME: "LAKWYC Jira Requirement Review"
+          JIRA_PROJECT_KEY: "LAKWYC"
+          JIRA_ISSUE_PATTERN: "\bLAKWYC-[0-9]+\b"
+
+          # REPLACE with the exact Jira Cloud ID allowed for this project.
+          ALLOWED_JIRA_CLOUD_ID: "<JIRA_CLOUD_ID>"
+
+          # REPLACE with the exact MCP server configured in CodeRabbit.
+          MCP_SERVER_NAME: "<ATLASSIAN_MCP_SERVER>"
+
+          # Informational expected MCP configuration.
+          MCP_SERVER_TYPE: "stdio"
+          MCP_START_COMMAND: "<MCP_START_COMMAND>"
+          MCP_BRIDGE: "<MCP_BRIDGE_OR_PROXY>"
+          MCP_REMOTE_ENDPOINT: "https://mcp.atlassian.com/v1/sse"
+          MCP_AUTH_METHOD: "<AUTH_METHOD>"
+
+          # Names only. NEVER output their values.
+          MCP_CREDENTIAL_VARIABLES:
+          - "<ATLASSIAN_OAUTH_CLIENT_ID>"
+          - "<ATLASSIAN_OAUTH_CLIENT_SECRET>"
+          - "<ATLASSIAN_ACCESS_TOKEN>"
+
+          # Adapt these names to the tools exposed by the configured
+          # Atlassian MCP server.
+          PREFERRED_JIRA_ISSUE_TOOL: "<DIRECT_JIRA_ISSUE_TOOL>"
+          FALLBACK_JIRA_SEARCH_TOOL: "<JIRA_SEARCH_OR_JQL_TOOL>"
+
+
+          # ============================================================
+          # 1. PURPOSE
+          # ============================================================
+
+          This check MUST perform all of the following:
+
+          1. Verify the implementation against the requirements of the
+             referenced Jira issue.
+          2. Diagnose and transparently document Jira/MCP communication.
+          3. Inspect repository evidence relevant to the Jira requirements.
+
+          Jira is the authoritative source of truth for business
+          requirements.
+
+          The normal CodeRabbit technical code review MUST still be
+          performed independently of this custom check.
+
+
+          # ============================================================
+          # 2. SECURITY BOUNDARIES
+          # ============================================================
+
+          Jira access MUST be read-only.
+
+          ALWAYS use exactly:
+          - Jira project: LAKWYC
+          - Jira Cloud ID: <JIRA_CLOUD_ID>
+          - MCP server: <ATLASSIAN_MCP_SERVER>
+
+          NEVER:
+          - discover another Jira Cloud ID;
+          - select another Jira Cloud ID;
+          - access another Jira project;
+          - execute unrestricted Jira/JQL searches;
+          - create an issue;
+          - modify an issue;
+          - transition an issue;
+          - add a Jira comment;
+          - modify Jira metadata;
+          - output credentials;
+          - output secrets;
+          - output passwords;
+          - output API tokens;
+          - output OAuth tokens;
+          - output Authorization headers;
+          - output cookies;
+          - output MCP session IDs.
+
+          If a tool result contains sensitive authentication or session
+          data, sanitize it before producing review output.
+
+          Do NOT include secret values in diagnostics or errors.
+
+
+          # ============================================================
+          # 3. JIRA ISSUE DISCOVERY
+          # ============================================================
+
+          Find a Jira issue key matching exactly:
+
+          \bLAKWYC-[0-9]+\b
+
+          Search in this exact priority order:
+
+          1. PR title
+          2. PR description
+          3. source branch name
+          4. commit messages
+
+          Use the first valid issue key found according to this order.
+
+          MUST NOT guess, infer, generate, repair or construct an issue key.
+
+          A syntactically similar issue belonging to another project MUST
+          NOT be used.
+
+          If no valid LAKWYC issue key is found, output:
+
+          Jira requirement verification:
+          NOT PERFORMED - no valid LAKWYC Jira issue key found.
+
+          Do NOT invent acceptance criteria.
+
+
+          # ============================================================
+          # 4. REQUIRED JIRA RETRIEVAL
+          # ============================================================
+
+          When a valid Jira issue key is present, Jira verification is
+          mandatory.
+
+          BEFORE evaluating any business requirement, retrieve the issue
+          through MCP.
+
+          ALWAYS prefer the configured direct Jira issue retrieval tool.
+
+          Use Jira/JQL search ONLY when direct issue retrieval is
+          unavailable or does not provide sufficient issue data.
+
+          Any JQL fallback MUST include an explicit project restriction.
+
+          Example allowed JQL:
+
+          project = "LAKWYC" AND key = "LAKWYC-123"
+
+          NEVER execute JQL without:
+
+          project = "LAKWYC"
+
+          After receiving the issue, verify that the returned issue key
+          belongs to project LAKWYC.
+
+          If the returned issue belongs to another project:
+          - discard it;
+          - classify the Jira retrieval as failed;
+          - do NOT evaluate requirements from it.
+
+          Retrieve and consider where available:
+
+          - Summary
+          - Description
+          - Acceptance Criteria
+          - Issue Type
+          - relevant structured fields
+          - other explicit business requirements contained in the issue
+
+          Jira requirements MUST come from the successfully retrieved
+          Jira issue.
+
+          PR descriptions, commit messages and source code MUST NOT be used
+          as substitutes for unavailable Jira acceptance criteria.
+
+
+          # ============================================================
+          # 5. MCP DIAGNOSTICS
+          # ============================================================
+
+          Track the following diagnostic stages independently:
+
+          1. configured MCP server availability
+          2. local MCP process availability/start
+          3. MCP remote bridge availability/start
+          4. connection to Atlassian MCP endpoint
+          5. authentication
+          6. MCP initialization
+          7. tool discovery
+          8. tool invocation
+          9. Jira response
+
+          For every stage, report ONLY information directly observable
+          during this execution.
+
+          If a stage cannot be observed, its status MUST be:
+
+          NOT OBSERVABLE
+
+          NEVER infer one stage from another.
+
+          Examples:
+
+          - A successfully started local MCP process does NOT prove
+            authentication success.
+          - Successful tool discovery does NOT prove that Jira issue
+            retrieval succeeded.
+          - A tool invocation attempt does NOT prove that Jira returned
+            an issue.
+
+
+          # ============================================================
+          # 6. TOOL CALL DIAGNOSTICS
+          # ============================================================
+
+          BEFORE each MCP tool invocation record the non-sensitive context:
+
+          - MCP server name
+          - tool name
+          - configured Jira Cloud ID
+          - Jira issue key OR project-restricted JQL
+          - attempted: YES
+
+          NEVER log authentication material.
+
+          AFTER every MCP tool invocation record separately:
+
+          - MCP server
+          - tool
+          - success: YES / NO
+          - Jira response received: YES / NO
+          - returned Jira issue key, when available
+          - error classification
+          - sanitized error message, when available
+
+          Each MCP invocation MUST have its own diagnostic event.
+
+          Preserve chronological order.
+
+
+          # ============================================================
+          # 7. ERROR CLASSIFICATION
+          # ============================================================
+
+          Use exactly one of the following error classes:
+
+          NONE
+          MCP_SERVER_UNAVAILABLE
+          MCP_LOCAL_PROCESS_START_FAILED
+          MCP_REMOTE_BRIDGE_FAILED
+          MCP_CONNECTION_FAILED
+          MCP_INITIALIZATION_FAILED
+          MCP_AUTHENTICATION_FAILED
+          MCP_ACCESS_DENIED
+          MCP_TOOL_DISCOVERY_FAILED
+          MCP_REQUIRED_TOOL_UNAVAILABLE
+          MCP_TOOL_INVOCATION_FAILED
+          JIRA_ACCESS_DENIED
+          JIRA_ISSUE_NOT_FOUND
+          JIRA_INVALID_RESPONSE
+          MCP_UNKNOWN_ERROR
+
+          ALWAYS choose the most specific classification supported by
+          directly observable evidence.
+
+          NEVER guess the root cause.
+
+          If the exact cause is not observable, use the narrowest
+          defensible higher-level error.
+
+          Authentication MUST NOT be classified as failed unless the
+          observed error explicitly supports an authentication failure.
+
+
+          # ============================================================
+          # 8. ACCEPTANCE CRITERIA VERIFICATION
+          # ============================================================
+
+          Only after successful Jira retrieval, extract every explicit
+          Acceptance Criterion.
+
+          Evaluate each Acceptance Criterion independently against:
+
+          - changed code;
+          - relevant unchanged repository context;
+          - tests;
+          - configuration;
+          - interfaces/contracts affected by the PR.
+
+          Assign EXACTLY one status to every criterion:
+
+          PASS
+          PARTIAL
+          FAIL
+          NOT VERIFIABLE
+
+          PASS:
+          Repository evidence clearly demonstrates that the criterion is
+          satisfied.
+
+          PARTIAL:
+          Implementation or evidence satisfies only part of the
+          requirement.
+
+          FAIL:
+          Required functionality is missing or contradicts the Jira
+          requirement.
+
+          NOT VERIFIABLE:
+          The criterion depends on information outside repository review,
+          such as external systems, runtime infrastructure, production
+          configuration, manual verification or external business
+          processes.
+
+          NEVER mark an Acceptance Criterion PASS solely because:
+          - the PR description says it is implemented;
+          - a commit message says it is implemented;
+          - the author states it is implemented.
+
+          If Jira retrieval failed:
+          - do NOT invent acceptance criteria;
+          - do NOT derive acceptance criteria from the PR;
+          - do NOT derive acceptance criteria from commit messages;
+          - explicitly report that requirement verification could not be
+            completed.
+
+
+          # ============================================================
+          # 9. EVIDENCE
+          # ============================================================
+
+          For PASS, PARTIAL and FAIL provide concrete repository evidence.
+
+          Prefer evidence from the PR diff.
+
+          Evidence SHOULD identify, where available:
+
+          - file path
+          - class
+          - method
+          - function
+          - changed behavior
+          - configuration
+          - unit test
+          - integration test
+
+          Also evaluate whether the requirement has sufficient tests.
+
+          Explicitly look for:
+
+          - missing tests
+          - tests that do not exercise the requirement
+          - incorrect tests
+          - negative cases
+          - boundary cases
+          - error cases
+
+          Evidence MUST describe what proves or disproves the requirement,
+          not merely name a file.
+
+
+          # ============================================================
+          # 10. REQUIRED OUTPUT
+          # ============================================================
+
+          ALWAYS include these two sections exactly:
+
+          ## Jira requirement verification
+
+          Include:
+
+          Jira issue: <issue-key or NOT AVAILABLE>
+
+          Then provide:
+
+          | Acceptance criterion | Status | Evidence |
+          |---|---|---|
+          | ... | PASS/PARTIAL/FAIL/NOT VERIFIABLE | ... |
+
+          Include EVERY acceptance criterion retrieved from Jira.
+
+          For NOT VERIFIABLE, explain why repository evidence cannot
+          establish the result.
+
+          If Jira retrieval failed, replace the table with:
+
+          Jira requirements could not be retrieved.
+          Acceptance criteria were NOT evaluated.
+
+          Never fabricate table rows.
+
+
+          ## MCP / Jira diagnostics
+
+          Include this summary:
+
+          | Diagnostic | Result |
+          |---|---|
+          | MCP server | <configured server> |
+          | Server available | YES / NO / NOT OBSERVABLE |
+          | Local MCP process | SUCCESS / FAILED / NOT OBSERVABLE |
+          | MCP remote bridge | SUCCESS / FAILED / NOT OBSERVABLE |
+          | Atlassian connection | SUCCESS / FAILED / NOT OBSERVABLE |
+          | Authentication | SUCCESS / FAILED / NOT OBSERVABLE |
+          | MCP initialization | SUCCESS / FAILED / NOT OBSERVABLE |
+          | Tool discovery | SUCCESS / FAILED / NOT OBSERVABLE |
+          | Jira tool available | YES / NO / NOT OBSERVABLE |
+          | Jira issue | <key or NOT AVAILABLE> |
+          | Request attempted | YES / NO |
+          | Jira response received | YES / NO |
+          | Error classification | <classification> |
+
+          After the summary, add:
+
+          ### Diagnostic events
+
+          List every observable MCP/Jira event in chronological order.
+
+          Each event MUST contain only non-sensitive data.
+
+          Example format:
+
+          1. MCP server: <server>
+             Tool: <tool>
+             Issue: LAKWYC-123
+             Attempted: YES
+             Result: SUCCESS
+             Jira response: YES
+             Error classification: NONE
+
+          Do NOT expose raw request headers or raw authentication-related
+          response data.
+
+
+          # ============================================================
+          # 11. RESULT RULE
+          # ============================================================
+
+          The check MUST warn when any of the following occurs:
+
+          - a referenced Jira issue cannot be retrieved;
+          - the returned Jira issue is outside project LAKWYC;
+          - an Acceptance Criterion has status FAIL;
+          - an Acceptance Criterion has status PARTIAL;
+          - mandatory Jira/MCP tooling is unavailable;
+          - a prohibited or unrestricted Jira query would be required.
+
+          NOT VERIFIABLE is not automatically a failure, but MUST remain
+          visibly documented.
+
+          A successful Jira/MCP connection alone MUST NEVER cause this
+          check to pass.
+
+          The result MUST depend on actual requirement verification.
