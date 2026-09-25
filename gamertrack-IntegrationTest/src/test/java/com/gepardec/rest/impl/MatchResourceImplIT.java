@@ -1,18 +1,23 @@
 package com.gepardec.rest.impl;
 
+import com.gepardec.core.services.ScoreService;
 import com.gepardec.model.Game;
 import com.gepardec.model.User;
 import com.gepardec.rest.model.command.*;
 import com.gepardec.rest.model.dto.GameRestDto;
 import com.gepardec.rest.model.dto.MatchRestDto;
+import com.gepardec.rest.model.dto.ScoreRestDto;
 import com.gepardec.rest.model.dto.UserRestDto;
-import io.github.cdimascio.dotenv.Dotenv;
+import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.core.Response.Status;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -23,6 +28,7 @@ import static java.lang.Math.ceil;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+@QuarkusTest
 public class MatchResourceImplIT {
 
     ArrayList<String> usesMatchTokens = new ArrayList<>();
@@ -30,11 +36,15 @@ public class MatchResourceImplIT {
     ArrayList<String> usesGameTokens = new ArrayList<>();
 
     static String authHeader;
-    String bearerToken = authHeader.replace("Bearer ", "");
+    String bearerToken;
 
-    static Dotenv dotenv = Dotenv.configure().directory("../").filename("secret.env").ignoreIfMissing().load();
-    private static final String SECRET_DEFAULT_PW = dotenv.get("SECRET_DEFAULT_PW", System.getenv("SECRET_DEFAULT_PW"));
-    private static final String SECRET_ADMIN_NAME = dotenv.get("SECRET_ADMIN_NAME", System.getenv("SECRET_ADMIN_NAME"));
+    @ConfigProperty(name = "secret.default.pw")
+    String SECRET_DEFAULT_PW;
+    @ConfigProperty(name = "secret.admin.name")
+    String SECRET_ADMIN_NAME;
+
+    @Inject
+    ScoreService scoreService;
 
 
 
@@ -44,22 +54,25 @@ public class MatchResourceImplIT {
 
     @BeforeAll
     public static void setup() {
-        reset();
-        port = 8080;
-        basePath = "gepardec-gamertrack/api/v1";
         enableLoggingOfRequestAndResponseIfValidationFails(LogDetail.ALL);
+    }
 
-        authHeader = with().when()
-                .contentType("application/json")
-                .body(new AuthCredentialCommand(SECRET_ADMIN_NAME,SECRET_DEFAULT_PW))
-                .headers("Content-Type", ContentType.JSON,
-                        "Accept", ContentType.JSON)
-                .request("POST", "/auth/login")
-                .then()
-                .statusCode(200)
-                .extract()
-                .header("Authorization");
-
+    @BeforeEach
+    public void login() {
+        basePath = "/gepardec-gamertrack/api/v1";
+        if (authHeader == null) {
+            authHeader = with().when()
+                    .contentType("application/json")
+                    .body(new AuthCredentialCommand(SECRET_ADMIN_NAME,SECRET_DEFAULT_PW))
+                    .headers("Content-Type", ContentType.JSON,
+                            "Accept", ContentType.JSON)
+                    .request("POST", "/auth/login")
+                    .then()
+                    .statusCode(200)
+                    .extract()
+                    .header("Authorization");
+        }
+        bearerToken = authHeader.replace("Bearer ", "");
     }
 
     @AfterEach
@@ -363,6 +376,82 @@ public class MatchResourceImplIT {
     }
 
     @Test
+    void ensureCreateMatchForUserWithoutScoreReturns400BadRequestAndPersistsNothing() {
+        GameRestDto createdGame = createGame();
+        UserRestDto userWithoutScore = createUser();
+        UserRestDto userWithScore = createUser();
+
+        // Simulate a user without a score for the game (e.g. after deactivation removed
+        // the default scores) by deleting the user's default score directly.
+        scoreService.filterScores(null, null, userWithoutScore.token(), createdGame.token(), true)
+                .forEach(score -> scoreService.deleteScore(score.getToken()));
+
+        CreateMatchCommand createMatchCommand = new CreateMatchCommand(
+                new Game(null, createdGame.token(), createdGame.name(), createdGame.rules()),
+                List.of(new User(null, userWithoutScore.firstname(), userWithoutScore.lastname(),
+                                userWithoutScore.deactivated(), userWithoutScore.token()),
+                        new User(null, userWithScore.firstname(), userWithScore.lastname(),
+                                userWithScore.deactivated(), userWithScore.token())));
+
+        with()
+                .headers(
+                        "Authorization",
+                        "Bearer " + bearerToken,
+                        "Content-Type",
+                        ContentType.JSON,
+                        "Accept",
+                        ContentType.JSON)
+                .body(createMatchCommand)
+                .contentType("application/json")
+                .post(MATCH_PATH)
+                .then()
+                .statusCode(Status.BAD_REQUEST.getStatusCode());
+
+        // no match was persisted
+        var foundMatches = given()
+                .queryParam("gameToken", createdGame.token())
+                .when()
+                .get(MATCH_PATH)
+                .then()
+                .statusCode(Status.OK.getStatusCode())
+                .extract()
+                .jsonPath()
+                .getList("", MatchRestDto.class);
+
+        assertTrue(foundMatches.isEmpty());
+
+        // and no rating was updated: the other user's score is still the default
+        var foundScores = given()
+                .queryParam("game", createdGame.token())
+                .queryParam("user", userWithScore.token())
+                .when()
+                .get("/scores")
+                .then()
+                .statusCode(Status.OK.getStatusCode())
+                .extract()
+                .jsonPath()
+                .getList("", ScoreRestDto.class);
+
+        assertEquals(1, foundScores.size());
+        assertEquals(1500.0, foundScores.getFirst().score());
+    }
+
+    @Test
+    void ensureCreateMatchWorksForBothUserAndGameCreationOrders() {
+        // game created before its users
+        GameRestDto gameCreatedFirst = createGame();
+        MatchRestDto matchForGameCreatedFirst = createMatch(createUser(), createUser(), gameCreatedFirst);
+        assertEquals(gameCreatedFirst.token(), matchForGameCreatedFirst.game().token());
+
+        // users created before the game
+        UserRestDto userCreatedFirst1 = createUser();
+        UserRestDto userCreatedFirst2 = createUser();
+        GameRestDto gameCreatedLast = createGame("game created after users");
+        MatchRestDto matchForGameCreatedLast = createMatch(userCreatedFirst1, userCreatedFirst2, gameCreatedLast);
+        assertEquals(gameCreatedLast.token(), matchForGameCreatedLast.game().token());
+    }
+
+    @Test
     void ensureUpdateMatchForExistingMatchReturns200OkWithUpdatedMatch() {
         MatchRestDto existingMatch = createMatch();
         UserRestDto userRestDto = createUser();
@@ -486,6 +575,10 @@ public class MatchResourceImplIT {
         return userRestDto;
     }
     public GameRestDto createGame() {
+        return createGame("default Game");
+    }
+
+    public GameRestDto createGame(String name) {
         GameRestDto gameRestDto = with()
                 .headers(
                         "Authorization",
@@ -494,7 +587,7 @@ public class MatchResourceImplIT {
                         ContentType.JSON,
                         "Accept",
                         ContentType.JSON)
-                .body(new CreateGameCommand("default Game", "no rules"))
+                .body(new CreateGameCommand(name, "no rules"))
                 .contentType("application/json")
                 .accept("application/json")
                 .when()

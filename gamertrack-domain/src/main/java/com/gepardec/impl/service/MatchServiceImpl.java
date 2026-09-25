@@ -12,7 +12,7 @@ import com.gepardec.model.Match;
 import com.gepardec.model.Score;
 import com.gepardec.model.User;
 import jakarta.data.page.PageRequest;
-import jakarta.ejb.Stateless;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@Stateless
+@ApplicationScoped
 @Transactional
 public class MatchServiceImpl implements MatchService {
 
@@ -87,18 +87,29 @@ public class MatchServiceImpl implements MatchService {
                 match.setGame(foundGame.get());
                 match.setUsers(foundUsers);
 
+                // Collect the participants' scores BEFORE persisting the match, so a match is
+                // never saved without its rating updates being applied. A participant without a
+                // score for the game (e.g. after deactivation removed their default scores)
+                // rejects the whole match instead of failing with an NPE halfway through.
+                List<Score> scoreList = new ArrayList<>();
+
+                for (User user : match.getUsers()) {
+                    List<Score> filteredScores = scoreService.filterScores(null, null, user.getToken(), match.getGame().getToken(), true);
+                    if (filteredScores.isEmpty()) {
+                        logger.error(
+                                "Match was not saved: no score exists for user %s %s (token: %s) and game %s (token: %s)".formatted(
+                                        user.getFirstname(), user.getLastname(), user.getToken(),
+                                        match.getGame().getName(), match.getGame().getToken()));
+                        return Optional.empty();
+                    }
+                    scoreList.add(filteredScores.getFirst());
+                }
+
                 logger.info(
                         "Saving match containing GameID: %s and UserIDs: %s".formatted(
                                 match.getGame().getId(), match.getUsers().stream().map(User::getId).toList()));
 
                 Optional<Match> savedMatch = matchRepository.saveMatch(match);
-
-                List<Score> scoreList = new ArrayList<>();
-
-                for (User user : match.getUsers()) {
-                    List<Score> filteredScores = scoreService.filterScores(null, null, user.getToken(), match.getGame().getToken(), true);
-                    scoreList.add(filteredScores.isEmpty() ? null : filteredScores.getFirst());
-                }
 
                 List<Score> updatedScores = eloService.updateElo(match.getGame(), scoreList, match.getUsers());
                 for (Score score : updatedScores) {
