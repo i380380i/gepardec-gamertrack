@@ -58,7 +58,7 @@ reviews:
 
           If a LAKWYC issue key exists:
 
-          Use the configured MCP server to retrieve the Jira issue.
+          Use the configured JIRA-Integration server to retrieve the Jira issue.
 
           Jira context:
           - Jira space: "LF - AI knows what you've committed"
@@ -66,7 +66,7 @@ reviews:
           - Issue key format: LAKWYC-[number]
 
           IMPORTANT:
-          - The MCP server MUST be used to retrieve the ticket.
+          - The JIRA-Integration server MUST be used to retrieve the ticket.
           - Do not infer ticket content from the PR title.
           - Do not infer ticket content from the PR description.
           - Do not infer acceptance criteria from branch names,
@@ -95,9 +95,9 @@ reviews:
 
           PASS the check only if every acceptance criterion is PASS.
 
-          If the Jira ticket cannot be retrieved through MCP:
+          If the Jira ticket cannot be retrieved through JIRA-Integration:
           do NOT perform an extended review.
-          Return a short warning indicating that MCP/Jira context
+          Return a short warning indicating that JIRA-Integration context
           was unavailable.
 
           Keep the complete result concise.
