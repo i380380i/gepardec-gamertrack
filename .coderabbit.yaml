@@ -1,13 +1,162 @@
+# Source: defaults
+language: en-US
+chat:
+  integrations:
+    jira:
+      usage: enabled
+integrations:
+  jira:
+    usage: enabled
+# Source: defaults
+tone_instructions: ''
+# Source: defaults
+early_access: false
+# Source: defaults
+enable_free_tier: true
+# Source: defaults
+inheritance: false
 reviews:
-  custom_checks:
-    - name: "Jira-Akzeptanzkriterien"
-      instructions: |
-        - Lies den Kontext des verlinkten Jira-Tickets aus dem PR-Titel oder der Beschreibung.
-        - Füge am Anfang deines Reviews eine Sektion namens "### 📋 Jira Akzeptanzkriterien" ein.
-        - Erstelle einen Kommentar mit den Akzeptanzkriterien und schicke den Kommentar in den PR im Review damit dieser im PR protokolliert ist.
-        - Liste dort alle Akzeptanzkriterien aus dem Ticket als Checkliste auf.
-        - Prüfe für jedes Kriterium, ob der Code im PR dieses erfüllt. Markiere es exakt wie folgt:
-          - ✅ (erfüllt)
-          - ❌ (nicht erfüllt)
-          - ❓ (unklar oder im Code nicht nachvollziehbar)
-        - Wenn ein Kriterium nicht erfüllt (❌) oder unklar (❓) ist, schreibe direkt unter den Punkt einen konkreten Verbesserungsvorschlag oder Hinweis.
+  # Source: defaults
+  profile: chill
+  # Source: defaults
+  request_changes_workflow: false
+  # Source: defaults
+  high_level_summary: true
+  # Source: defaults
+  high_level_summary_instructions: ''
+  # Source: defaults
+  high_level_summary_placeholder: '`@coderabbitai` summary'
+  # Source: defaults
+  high_level_summary_in_walkthrough: false
+  # Source: defaults
+  auto_title_placeholder: '`@coderabbitai`'
+  # Source: defaults
+  auto_title_instructions: ''
+  # Source: defaults
+  review_status: true
+  # Source: defaults
+  review_details: false
+  # Source: defaults
+  review_progress: true
+  # Source: defaults
+  commit_status: true
+  # Source: defaults
+  fail_commit_status: false
+  # Source: defaults
+  collapse_walkthrough: true
+  # Source: defaults
+  changed_files_summary: true
+  # Source: defaults
+  sequence_diagrams: true
+  # Source: defaults
+  estimate_code_review_effort: true
+  # Source: defaults
+  assess_linked_issues: true
+  # Source: defaults
+  related_issues: true
+  # Source: defaults
+  related_prs: true
+  # Source: defaults
+  suggested_labels: true
+  # Source: defaults
+  labeling_instructions: []
+  # Source: defaults
+  mutually_exclusive_groups: {}
+  # Source: defaults
+  auto_apply_labels: false
+  # Source: defaults
+  suggested_reviewers: true
+  # Source: defaults
+  auto_assign_reviewers: false
+  # Source: defaults
+  suggested_reviewers_instructions: []
+  # Source: defaults
+  in_progress_fortune: true
+  # Source: defaults
+  poem: false
+  # Source: defaults
+  enable_prompt_for_ai_agents: true
+  # Source: defaults
+  path_filters: []
+  # Source: defaults
+  path_instructions: []
+  # Source: defaults
+  abort_on_close: true
+  # Source: defaults
+  disable_cache: false
+  slop_detection:
+    # Source: defaults
+    enabled: true
+    # Source: defaults
+    include_all_authors: false
+  auto_review:
+    # Source: defaults
+    enabled: true
+    # Source: defaults
+    description_keyword: ''
+    # Source: defaults
+    auto_incremental_review: true
+    # Source: defaults
+    auto_pause_after_reviewed_commits: 5
+    # Source: defaults
+    ignore_title_keywords: []
+    # Source: defaults
+    labels: []
+    # Source: defaults
+    drafts: false
+    # Source: defaults
+    base_branches: []
+    # Source: defaults
+    ignore_usernames: []
+  finishing_touches:
+    docstrings:
+      # Source: defaults
+      enabled: true
+    unit_tests:
+      # Source: defaults
+      enabled: true
+    simplify:
+      # Source: defaults
+      enabled: false
+    autofix:
+      # Source: defaults
+      enabled: true
+    fix_ci:
+      # Source: defaults
+      enabled: true
+    resolve_merge_conflict:
+      # Source: defaults
+      enabled: true
+    # Source: defaults
+    custom: []
+  pre_merge_checks:
+    # Source: defaults
+    override_requested_reviewers_only: false
+    docstrings:
+      # Source: defaults
+      mode: warning
+      # Source: defaults
+      threshold: 80
+    title:
+      # Source: defaults
+      mode: warning
+      # Source: defaults
+      requirements: ''
+    description:
+      # Source: defaults
+      mode: warning
+    issue_assessment:
+      # Source: defaults
+      mode: warning
+    custom_checks:
+      - name: "Jira-Akzeptanzkriterien"
+        instructions: |
+          - Lies den Kontext des verlinkten Jira-Tickets aus dem PR-Titel oder der Beschreibung.
+          - Füge am Anfang deines Reviews eine Sektion namens "### 📋 Jira Akzeptanzkriterien" ein.
+          - Erstelle einen Kommentar mit den Akzeptanzkriterien und schicke den Kommentar in den PR im Review damit dieser im PR protokolliert ist.
+          - Liste dort alle Akzeptanzkriterien aus dem Ticket als Checkliste auf.
+          - Prüfe für jedes Kriterium, ob der Code im PR dieses erfüllt. Markiere es exakt wie folgt:
+            - ✅ (erfüllt)
+            - ❌ (nicht erfüllt)
+            - ❓ (unklar oder im Code nicht nachvollziehbar)
+          - Wenn ein Kriterium nicht erfüllt (❌) oder unklar (❓) ist, schreibe direkt unter den Punkt einen konkreten Verbesserungsvorschlag oder Hinweis.
