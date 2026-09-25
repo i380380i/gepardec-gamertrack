@@ -1,6 +1,5 @@
 package com.gepardec.security;
 
-import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -8,6 +7,7 @@ import org.apache.shiro.crypto.SecureRandomNumberGenerator;
 import org.apache.shiro.crypto.hash.Sha512Hash;
 import org.apache.shiro.lang.codec.Hex;
 import org.apache.shiro.lang.util.ByteSource;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.security.Key;
@@ -17,14 +17,17 @@ import java.util.Map;
 
 @ApplicationScoped
 public class JwtUtil {
-    static Dotenv dotenv = Dotenv.configure().directory("../../").filename("secret.env").ignoreIfMissing().load();
-    private static final String SECRET_KEY = dotenv.get("SECRET_JWT_HASH", System.getenv("SECRET_JWT_HASH"));
+    @ConfigProperty(name = "secret.jwt.hash")
+    String SECRET_KEY;
+
+    @ConfigProperty(name = "jwt.expiration.minutes", defaultValue = "60")
+    long JWT_EXPIRATION_MINUTES;
 
     public String generateToken(String username) {
         var jwt = Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 720))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * JWT_EXPIRATION_MINUTES))
                 .signWith(SignatureAlgorithm.HS512, generateKey())
                 .compact();
 
