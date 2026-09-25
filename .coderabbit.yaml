@@ -1,0 +1,37 @@
+language: "de-AT"
+
+integrations:
+  jira:
+    usage: enabled
+
+knowledge_base:
+  issues: auto
+
+reviews:
+  profile: "quiet"
+  
+  # Zwingt CodeRabbit dazu, verlinkte Tickets (wie Jira) zu bewerten
+  assess_linked_issues: true 
+  
+  # Steuert das Format der PR-Zusammenfassung
+  high_level_summary_instructions: |
+    Du hast Zugriff auf die verlinkten Jira-Tickets im PR-Kontext.
+    
+    Analysiere die Akzeptanzkriterien aus dem verlinkten Jira-Ticket (LAKWYC-...) und gleiche sie mit dem Code ab.
+    
+    Füge zwingend am Ende deiner Zusammenfassung eine Checkliste im folgenden Format ein:
+    
+    ### 📋 Jira Akzeptanzkriterien Checkliste
+    - [x] Kriterium 1 (Kurze Begründung/Referenz, warum erfüllt)
+    - [ ] Kriterium 2 (Begründung, warum nicht erfüllt oder was fehlt)
+    
+    Wenn keine Akzeptanzkriterien gefunden wurden, gib aus: "Keine Akzeptanzkriterien im verlinkten Ticket gefunden."
+
+  pre_merge_checks:
+    custom_checks:
+      - name: "Jira Acceptance Criteria"
+        mode: "warning"
+        instructions: |
+          Prüfe den PR-Kontext auf verlinkte Jira-Tickets (LAKWYC-...).
+          Wenn ein Ticket verlinkt ist, prüfe, ob ALLE Akzeptanzkriterien durch den Code erfüllt werden.
+          Wenn Kriterien nicht erfüllt sind, schlage als Warning an und liste die fehlenden Kriterien auf.
