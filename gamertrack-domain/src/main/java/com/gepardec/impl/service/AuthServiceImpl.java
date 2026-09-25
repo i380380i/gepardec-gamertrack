@@ -5,12 +5,13 @@ import com.gepardec.core.services.AuthService;
 import com.gepardec.core.services.TokenService;
 import com.gepardec.model.AuthCredential;
 import com.gepardec.security.JwtUtil;
-import io.github.cdimascio.dotenv.Dotenv;
+import com.gepardec.security.TokenLogUtil;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import jakarta.ejb.Stateless;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,12 +19,13 @@ import java.util.Map;
 import java.util.Optional;
 
 @Transactional
-@Stateless
+@ApplicationScoped
 public class AuthServiceImpl implements AuthService {
 
-    static Dotenv dotenv = Dotenv.configure().directory("../../").filename("secret.env").ignoreIfMissing().load();
-    private static final String SECRET_DEFAULT_PW = dotenv.get("SECRET_DEFAULT_PW", System.getenv("SECRET_DEFAULT_PW"));
-    private static final String SECRET_ADMIN_NAME = dotenv.get("SECRET_ADMIN_NAME", System.getenv("SECRET_ADMIN_NAME"));
+    @ConfigProperty(name = "secret.default.pw")
+    String SECRET_DEFAULT_PW;
+    @ConfigProperty(name = "secret.admin.name")
+    String SECRET_ADMIN_NAME;
 
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
     @Inject
@@ -40,7 +42,8 @@ public class AuthServiceImpl implements AuthService {
 
             if (dbCredential.isPresent()){
                 if(jwtUtil.passwordsMatches(dbCredential.get().getPassword(), dbCredential.get().getSalt(), credential.getPassword())){
-                    log.info("Credential {} authenticated", credential.getUsername());
+                    // The admin username is a configured secret, never log it
+                    log.info("Credential authenticated");
                     return true;
                 }
                 log.error("Invalid credential: Credential dont match");
@@ -76,7 +79,8 @@ public class AuthServiceImpl implements AuthService {
             Jwts.parser().setSigningKey(jwtUtil.generateKey()).build().parseClaimsJws(token);
             isValid = true;
         } catch (JwtException e) {
-            log.error("Token validation failed {}", e.getMessage());
+            log.error("Token validation failed ({}), fingerprint {}",
+                    TokenLogUtil.categorize(e), TokenLogUtil.fingerprint(token));
         }
         return isValid;
     }
