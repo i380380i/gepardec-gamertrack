@@ -1,8 +1,16 @@
 language: "de-AT"
+knowledge_base:
+  jira:
+    usage: "enabled"
+    project_keys:
+      - "LAKWYC"
+  mcp:
+    usage: "enabled"
+
 chat:
   integrations:
     jira:
-      usage: enabled
+      usage: "enabled"
 integrations:
   jira:
     usage: enabled
