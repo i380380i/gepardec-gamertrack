@@ -1,0 +1,11 @@
+reviews:
+  # Stellt sicher, dass CR den Kontext des PRs (wie Jira-Tickets) stark gewichtet
+  request_features_and_bug_fixes: true 
+  
+  instructions: |
+    - Lese den Kontext des verlinkten Jira-Tickets.
+    - Füge am Anfang deines Reviews eine Sektion namens "### 📋 Jira Akzeptanzkriterien" ein.
+    - Liste dort alle Akzeptanzkriterien aus dem Ticket als Checkliste auf.
+    - Prüfe für jedes Kriterium, ob der Code im PR dieses erfüllt. Markiere es mit ✅ (erfüllt), ❌ (nicht erfüllt) oder ❓ (unklar/fehlt).
+    - Wenn ein Kriterium nicht erfüllt ist, schreibe einen konkreten Verbesserungsvorschlag.
+    - Erstelle einen Kommentar mit den Akzeptanzkriterien und schicke den Kommentar in den PR im Review damit dieser im PR protokolliert ist.
