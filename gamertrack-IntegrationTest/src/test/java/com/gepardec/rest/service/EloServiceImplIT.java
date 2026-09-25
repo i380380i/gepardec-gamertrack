@@ -7,17 +7,20 @@ import com.gepardec.rest.model.command.CreateGameCommand;
 import com.gepardec.rest.model.command.CreateMatchCommand;
 import com.gepardec.rest.model.command.CreateUserCommand;
 import com.gepardec.rest.model.dto.ScoreRestDto;
-import io.github.cdimascio.dotenv.Dotenv;
+import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.http.ContentType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static io.restassured.RestAssured.enableLoggingOfRequestAndResponseIfValidationFails;
 import static io.restassured.RestAssured.with;
@@ -25,34 +28,42 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@QuarkusTest
 public class EloServiceImplIT {
 
     static List<String> usesGameTokens = new ArrayList<>();
     static List<String> usesUserTokens = new ArrayList<>();
 
     static String authHeader;
-    String bearerToken = authHeader.replace("Bearer ", "");
+    String bearerToken;
 
-    static Dotenv dotenv = Dotenv.configure().directory("../").filename("secret.env").ignoreIfMissing().load();
-    private static final String SECRET_DEFAULT_PW = dotenv.get("SECRET_DEFAULT_PW", System.getenv("SECRET_DEFAULT_PW"));
-    private static final String SECRET_ADMIN_NAME = dotenv.get("SECRET_ADMIN_NAME", System.getenv("SECRET_ADMIN_NAME"));
+    @ConfigProperty(name = "secret.default.pw")
+    String SECRET_DEFAULT_PW;
+    @ConfigProperty(name = "secret.admin.name")
+    String SECRET_ADMIN_NAME;
 
 
     @BeforeAll
     public static void setup() {
-        RestAssured.baseURI = "http://localhost:8080/gepardec-gamertrack/api/v1";
         enableLoggingOfRequestAndResponseIfValidationFails(LogDetail.ALL);
+    }
 
-        authHeader = with().when()
-                .contentType("application/json")
-                .body(new AuthCredentialCommand(SECRET_ADMIN_NAME,SECRET_DEFAULT_PW))
-                .headers("Content-Type", ContentType.JSON,
-                        "Accept", ContentType.JSON)
-                .request("POST", "/auth/login")
-                .then()
-                .statusCode(200)
-                .extract()
-                .header("Authorization");
+    @BeforeEach
+    public void login() {
+        RestAssured.basePath = "/gepardec-gamertrack/api/v1";
+        if (authHeader == null) {
+            authHeader = with().when()
+                    .contentType("application/json")
+                    .body(new AuthCredentialCommand(SECRET_ADMIN_NAME,SECRET_DEFAULT_PW))
+                    .headers("Content-Type", ContentType.JSON,
+                            "Accept", ContentType.JSON)
+                    .request("POST", "/auth/login")
+                    .then()
+                    .statusCode(200)
+                    .extract()
+                    .header("Authorization");
+        }
+        bearerToken = authHeader.replace("Bearer ", "");
     }
     @AfterEach
     public void tearDown() {
@@ -156,12 +167,14 @@ public class EloServiceImplIT {
                 new Game(null, gameToken1, "4Gewinnt", "Nicht schummeln"),
                 List.of(new User(0L, "Max","Muster",
                        false, userToken1),new User(0L, "Jakob","Mayer",
-                        false, userToken2)));
+                        false, userToken2)),
+                Map.of(userToken1, 1, userToken2, 2));
 
         CreateMatchCommand createMatchCommandUser2Wins = new CreateMatchCommand(
                 new Game(null, gameToken1, "4Gewinnt", "Nicht schummeln"),
                 List.of(new User(0L, "Jakob","Mayer",false, userToken2)
-                        , new User(0L, "Max","Muster",false, userToken1)));
+                        , new User(0L, "Max","Muster",false, userToken1)),
+                Map.of(userToken2, 1, userToken1, 2));
 
         with()
                 .headers(
